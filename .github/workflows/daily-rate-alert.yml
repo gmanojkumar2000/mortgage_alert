@@ -1,4 +1,4 @@
-name: Refinance Rate Alert
+name: Daily Refinance Rate Alert
 
 on:
   schedule:
@@ -42,8 +42,8 @@ jobs:
         run: python rate_alert.py
 
       - name: Upload alert log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: alert-log
+          name: daily-alert-log
           path: alert.log 
