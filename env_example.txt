@@ -1,0 +1,22 @@
+# Email credentials
+SENDER_EMAIL=your_email@gmail.com
+SENDER_PASSWORD=your_gmail_app_password
+RECIPIENT_EMAIL=recipient1@example.com,recipient2@example.com,recipient3@example.com
+
+# Telegram credentials
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+
+# Alert configuration
+TARGET_RATE=6
+NOTIFICATION_METHOD=email  # or telegram
+STATE=Oregon
+DAILY_REPORT=true  # Send daily rate report regardless of threshold
+
+# Rate source configuration
+RATE_SOURCE=fred  # fred, pmm, bankrate, mortgage_news_daily, or freddiemac
+FRED_API_KEY=your_fred_api_key  # Optional: Get free API key from https://fred.stlouisfed.org/docs/api/api_key.html
+
+# Logging
+LOG_FILE=alert.log
+LOG_LEVEL=INFO 
