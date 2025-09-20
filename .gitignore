@@ -3,6 +3,18 @@
 .env.local
 .env.*.local
 
+# Rate data (will be managed by GitHub Actions)
+data/rates.csv
+data/metadata.json
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
 # Python
 __pycache__/
 *.py[cod]
