@@ -39,7 +39,7 @@ jobs:
           echo "DAILY_REPORT=true" >> .env
 
       - name: Run rate alert script
-        run: python rate_alert.py
+        run: python main.py
 
       - name: Upload alert log
         uses: actions/upload-artifact@v4
