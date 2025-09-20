@@ -19,14 +19,20 @@ def setup_logging():
     """Setup logging configuration"""
     log_level = getattr(logging, config.log_level.upper(), logging.INFO)
     
+    # Hardcoded log file location
+    log_file = "alert.log"
+    
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(config.log_file),
+            logging.FileHandler(log_file),
             logging.StreamHandler(sys.stdout)
         ]
     )
+    
+    # Log the file location for reference
+    logging.getLogger(__name__).info(f"Log file created at: {log_file}")
 
 
 def main():

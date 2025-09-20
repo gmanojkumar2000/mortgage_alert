@@ -56,11 +56,11 @@ class EnhancedRateScraper:
                     if rate and self._validate_rate(rate):
                         source_rates[source] = rate
                         successful_sources.append(source)
-                        logger.info(f"✓ {source}: {rate}%")
+                        logger.info(f"[OK] {source}: {rate}%")
                     else:
-                        logger.warning(f"✗ {source}: Invalid rate {rate}")
+                        logger.warning(f"[FAIL] {source}: Invalid rate {rate}")
                 except Exception as e:
-                    logger.error(f"✗ {source}: Error - {e}")
+                    logger.error(f"[ERROR] {source}: Error - {e}")
                     source_rates[source] = None
             else:
                 logger.warning(f"Unknown source: {source}")
