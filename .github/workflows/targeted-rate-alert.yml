@@ -24,6 +24,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
+    - name: Download previous rate data
+      uses: actions/download-artifact@v4
+      if: always()
+      with:
+        name: rate-data
+        path: ./data
+      continue-on-error: true
+    
     - name: Create .env file
       run: |
         cat > .env << EOF
@@ -32,14 +40,29 @@ jobs:
         RECIPIENT_EMAIL=${{ secrets.RECIPIENT_EMAIL }}
         TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+        TARGET_RATE=${{ secrets.TARGET_RATE }}
+        NOTIFICATION_METHOD=${{ secrets.NOTIFICATION_METHOD }}
+        STATE=${{ secrets.STATE }}
+        FRED_API_KEY=${{ secrets.FRED_API_KEY }}
+        LOG_FILE=alert.log
+        LOG_LEVEL=INFO
+        RATE_SOURCE=fred
+        DAILY_REPORT=true
         EOF
     
     - name: Run rate alert check
-      run: python rate_alert.py
+      run: python main.py
+    
+    - name: Upload updated rate data
+      uses: actions/upload-artifact@v4
+      with:
+        name: rate-data
+        path: ./data
+        retention-days: 90
     
     - name: Upload logs
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: targeted-rate-alert-logs
-        path: rate_alert.log 
+        path: alert.log 

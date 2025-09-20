@@ -15,10 +15,14 @@ def setup_logging(level: str = "INFO"):
     """Setup logging configuration"""
     log_level = getattr(logging, level.upper(), logging.INFO)
     
+    # Hardcoded log file location
+    log_file = "alert.log"
+    
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
+            logging.FileHandler(log_file),
             logging.StreamHandler(sys.stdout)
         ]
     )
