@@ -1,0 +1,77 @@
+name: Enhanced Refinance Rate Alert
+
+on:
+  schedule:
+    # Run daily at 7:30 AM PST (15:30 UTC)
+    - cron: '30 15 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download previous rate data
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          name: rate-data
+          path: ./data
+        continue-on-error: true
+
+      - name: Create .env from secrets
+        run: |
+          echo "SENDER_EMAIL=${{ secrets.SENDER_EMAIL }}" >> .env
+          echo "SENDER_PASSWORD=${{ secrets.SENDER_PASSWORD }}" >> .env
+          echo "RECIPIENT_EMAIL=${{ secrets.RECIPIENT_EMAIL }}" >> .env
+          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> .env
+          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> .env
+          echo "TARGET_RATE=${{ secrets.TARGET_RATE }}" >> .env
+          echo "NOTIFICATION_METHOD=${{ secrets.NOTIFICATION_METHOD }}" >> .env
+          echo "STATE=${{ secrets.STATE }}" >> .env
+          echo "FRED_API_KEY=${{ secrets.FRED_API_KEY }}" >> .env
+          echo "LOG_FILE=alert.log" >> .env
+          echo "LOG_LEVEL=INFO" >> .env
+          echo "RATE_SOURCE=fred" >> .env
+          echo "DAILY_REPORT=true" >> .env
+
+      - name: Run enhanced rate alert script
+        run: python main.py
+
+      - name: Upload updated rate data
+        uses: actions/upload-artifact@v4
+        with:
+          name: rate-data
+          path: ./data
+          retention-days: 90
+
+      - name: Upload alert log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enhanced-alert-log
+          path: alert.log
+          retention-days: 30
+
+      - name: Commit rate data to repository (optional)
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git diff --staged --quiet || git commit -m "Update rate data: $(date +'%Y-%m-%d %H:%M:%S UTC')"
+          git push || echo "No changes to commit or push failed"
+        continue-on-error: true
