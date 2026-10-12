@@ -7,7 +7,7 @@ import csv
 import json
 import os
 import logging
-from datetime import datetime, date
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 
@@ -136,18 +136,19 @@ class RateDataManager:
                 return 'insufficient_data'
             
             # Simple trend calculation
-            first_half = recent_rates[:len(recent_rates)//2]
-            second_half = recent_rates[len(recent_rates)//2:]
+            split_at = len(recent_rates) // 2
+            newer_rates = recent_rates[:split_at]
+            older_rates = recent_rates[split_at:]
             
-            if not first_half or not second_half:
+            if not newer_rates or not older_rates:
                 return 'insufficient_data'
             
-            avg_first = sum(first_half) / len(first_half)
-            avg_second = sum(second_half) / len(second_half)
+            newer_average = sum(newer_rates) / len(newer_rates)
+            older_average = sum(older_rates) / len(older_rates)
             
-            if avg_second > avg_first + 0.1:
+            if newer_average > older_average + 0.1:
                 return 'rising'
-            elif avg_second < avg_first - 0.1:
+            elif newer_average < older_average - 0.1:
                 return 'falling'
             else:
                 return 'stable'
@@ -159,20 +160,23 @@ class RateDataManager:
     def get_recent_rates(self, days: int = 30) -> List[float]:
         """Get recent rates for trend analysis"""
         try:
-            rates = []
-            cutoff_date = datetime.now().date().replace(day=max(1, datetime.now().day - days))
+            records = []
+            cutoff_date = (datetime.now() - timedelta(days=max(days, 0))).date()
             
             with open(self.rates_file, 'r', newline='') as f:
                 reader = csv.DictReader(f)
-                for row in reader:
+                for sequence, row in enumerate(reader):
                     try:
-                        record_date = datetime.fromisoformat(row['date']).date()
-                        if record_date >= cutoff_date:
-                            rates.append(float(row['rate']))
-                    except (ValueError, KeyError):
+                        recorded_at = datetime.fromisoformat(
+                            row.get('timestamp') or row['date']
+                        )
+                        if recorded_at.date() >= cutoff_date:
+                            records.append((recorded_at, sequence, float(row['rate'])))
+                    except (TypeError, ValueError, KeyError):
                         continue
             
-            return sorted(rates, reverse=True)  # Most recent first
+            records.sort(key=lambda record: (record[0], record[1]), reverse=True)
+            return [rate for _, _, rate in records]
             
         except Exception as e:
             logger.error(f"Error getting recent rates: {e}")
