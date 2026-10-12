@@ -14,6 +14,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from mortgage_alert.core.config import Config
 
 
+@pytest.fixture(autouse=True)
+def clean_environment():
+    """Keep local .env values from leaking into configuration tests."""
+    with patch.dict(os.environ, {}, clear=True):
+        yield
+
+
 class TestConfig:
     """Test cases for Config class"""
     

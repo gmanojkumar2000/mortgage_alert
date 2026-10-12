@@ -5,6 +5,7 @@ Tests for the AlertSystem class
 import pytest
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -54,14 +55,19 @@ class TestAlertSystem:
         config.daily_report = original_daily_report
     
     def test_get_current_rate(self):
-        """Test getting current rate"""
+        """Test getting current rate without contacting external services."""
         alert_system = AlertSystem()
-        rate, source_data = alert_system.get_current_rate()
-        
-        # Should return either a valid rate or None
-        if rate is not None:
-            assert isinstance(rate, (int, float))
-            assert rate > 0
-            assert isinstance(source_data, dict)
-        else:
-            assert source_data.get('error') is not None
+        expected_source_data = {
+            'aggregated_rate': 5.25,
+            'successful_sources': ['fred'],
+        }
+
+        with patch.object(
+            alert_system.rate_scraper,
+            'get_aggregated_rate',
+            return_value=(5.25, expected_source_data),
+        ):
+            rate, source_data = alert_system.get_current_rate()
+
+        assert rate == 5.25
+        assert source_data == expected_source_data

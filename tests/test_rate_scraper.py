@@ -5,7 +5,7 @@ Tests for the Enhanced Rate Scraper
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -110,8 +110,7 @@ class TestEnhancedRateScraper:
         confidence = scraper._calculate_confidence(rates_single, sources_single)
         assert confidence == 'low'
     
-    @patch('mortgage_alert.scrapers.rate_scraper.requests.Session.get')
-    def test_fred_rate_scraping(self, mock_get):
+    def test_fred_rate_scraping(self):
         """Test FRED rate scraping with mocked response"""
         scraper = EnhancedRateScraper()
         
@@ -123,15 +122,12 @@ class TestEnhancedRateScraper:
             ]
         }
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
-        
-        # Mock environment variable for API key
-        with patch.dict('os.environ', {'FRED_API_KEY': 'test_key'}):
+        with patch.object(scraper, '_make_request', return_value=mock_response), \
+             patch.dict('os.environ', {'FRED_API_KEY': 'test_key'}):
             rate = scraper._get_fred_rate()
             assert rate == 5.25
     
-    @patch('mortgage_alert.scrapers.rate_scraper.requests.Session.get')
-    def test_bankrate_scraping(self, mock_get):
+    def test_bankrate_scraping(self):
         """Test Bankrate scraping with mocked response"""
         scraper = EnhancedRateScraper()
         
@@ -139,60 +135,62 @@ class TestEnhancedRateScraper:
         mock_response = Mock()
         mock_response.content = b'<html><body><div class="rate-value">5.25%</div></body></html>'
         mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
-        
-        rate = scraper._get_bankrate_rate()
+        with patch.object(scraper, '_make_request', return_value=mock_response):
+            rate = scraper._get_bankrate_rate()
         assert rate == 5.25
     
     def test_get_aggregated_rate_mock(self):
         """Test aggregated rate calculation with mocked sources"""
         scraper = EnhancedRateScraper()
         
-        # Mock individual source methods
-        with patch.object(scraper, '_get_fred_rate', return_value=5.25), \
-             patch.object(scraper, '_get_bankrate_rate', return_value=5.30), \
-             patch.object(scraper, '_get_mnd_rate', return_value=5.20):
-            
-            rate, source_data = scraper.get_aggregated_rate(['fred', 'bankrate', 'mortgage_news_daily'])
-            
-            assert rate is not None
-            assert 5.20 <= rate <= 5.30  # Should be median (5.25)
-            assert 'aggregated_rate' in source_data
-            assert 'source_rates' in source_data
-            assert 'successful_sources' in source_data
-            assert 'confidence' in source_data
-            assert len(source_data['successful_sources']) == 3
+        scraper.rate_sources.update({
+            'fred': Mock(return_value=5.25),
+            'bankrate': Mock(return_value=5.30),
+            'mortgage_news_daily': Mock(return_value=5.20),
+        })
+
+        rate, source_data = scraper.get_aggregated_rate(['fred', 'bankrate', 'mortgage_news_daily'])
+
+        assert rate is not None
+        assert 5.20 <= rate <= 5.30  # Should be median (5.25)
+        assert 'aggregated_rate' in source_data
+        assert 'source_rates' in source_data
+        assert 'successful_sources' in source_data
+        assert 'confidence' in source_data
+        assert len(source_data['successful_sources']) == 3
     
     def test_get_aggregated_rate_no_sources(self):
         """Test aggregated rate when no sources work"""
         scraper = EnhancedRateScraper()
         
-        # Mock all sources to return None
-        with patch.object(scraper, '_get_fred_rate', return_value=None), \
-             patch.object(scraper, '_get_bankrate_rate', return_value=None):
-            
-            rate, source_data = scraper.get_aggregated_rate(['fred', 'bankrate'])
-            
-            assert rate is None
-            assert 'error' in source_data
-            assert source_data['error'] == 'No valid rates found'
+        scraper.rate_sources.update({
+            'fred': Mock(return_value=None),
+            'bankrate': Mock(return_value=None),
+        })
+
+        rate, source_data = scraper.get_aggregated_rate(['fred', 'bankrate'])
+
+        assert rate is None
+        assert 'error' in source_data
+        assert source_data['error'] == 'No valid rates found'
     
     def test_get_aggregated_rate_mixed_results(self):
         """Test aggregated rate with some sources working"""
         scraper = EnhancedRateScraper()
         
-        # Mock mixed results
-        with patch.object(scraper, '_get_fred_rate', return_value=5.25), \
-             patch.object(scraper, '_get_bankrate_rate', return_value=None), \
-             patch.object(scraper, '_get_mnd_rate', return_value=5.30):
-            
-            rate, source_data = scraper.get_aggregated_rate(['fred', 'bankrate', 'mortgage_news_daily'])
-            
-            assert rate is not None
-            assert rate == 5.275  # Average of 5.25 and 5.30
-            assert len(source_data['successful_sources']) == 2
-            assert 'fred' in source_data['successful_sources']
-            assert 'mortgage_news_daily' in source_data['successful_sources']
+        scraper.rate_sources.update({
+            'fred': Mock(return_value=5.25),
+            'bankrate': Mock(return_value=None),
+            'mortgage_news_daily': Mock(return_value=5.30),
+        })
+
+        rate, source_data = scraper.get_aggregated_rate(['fred', 'bankrate', 'mortgage_news_daily'])
+
+        assert rate is not None
+        assert rate == 5.275  # Average of 5.25 and 5.30
+        assert len(source_data['successful_sources']) == 2
+        assert 'fred' in source_data['successful_sources']
+        assert 'mortgage_news_daily' in source_data['successful_sources']
 
 
 class TestRateScraperFactory:

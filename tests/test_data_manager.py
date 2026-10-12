@@ -2,12 +2,13 @@
 Tests for the Rate Data Manager
 """
 
+import csv
 import pytest
 import sys
 import tempfile
 import shutil
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 # Add src to path for imports
@@ -135,7 +136,30 @@ class TestRateDataManager:
         recent_rates = data_manager.get_recent_rates(days=30)
         
         assert len(recent_rates) == 5
-        assert recent_rates == sorted(test_rates, reverse=True)  # Should be sorted newest first
+        assert recent_rates == list(reversed(test_rates))
+
+    def test_get_recent_rates_handles_month_boundaries(self, data_manager):
+        """Use an actual date window instead of replacing the day of month."""
+        now = datetime.now()
+        recent = now - timedelta(days=2)
+        expired = now - timedelta(days=45)
+
+        with open(data_manager.rates_file, 'a', newline='') as rates_file:
+            writer = csv.writer(rates_file)
+            for recorded_at, rate in [(expired, 6.0), (recent, 5.0)]:
+                writer.writerow([
+                    recorded_at.date().isoformat(),
+                    recorded_at.isoformat(),
+                    rate,
+                    'test',
+                    6.0,
+                    'Oregon',
+                    False,
+                    False,
+                    '',
+                ])
+
+        assert data_manager.get_recent_rates(days=30) == [5.0]
     
     def test_get_rate_statistics(self, data_manager):
         """Test getting rate statistics"""
@@ -187,7 +211,7 @@ class TestRateDataManager:
             )
         
         trend = data_manager._calculate_trend()
-        assert trend in ['rising', 'falling', 'stable', 'insufficient_data']
+        assert trend == 'falling'
     
     def test_calculate_volatility(self, data_manager):
         """Test volatility calculation"""
