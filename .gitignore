@@ -1,13 +1,19 @@
-# Environment variables
+# Environment variables & secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!env_example.txt
+!.env.example
+*.pem
+*.key
+*secret*
+*credential*
 
-# Rate data (will be managed by GitHub Actions)
-data/rates.csv
-data/metadata.json
+# Rate data & JSON data files
+data/*.csv
+data/*.json
 
 # Log files
+alert.log
 *.log
 logs/
 
@@ -51,10 +57,6 @@ venv.bak/
 *.swp
 *.swo
 *~
-
-# Logs
-*.log
-logs/
 
 # OS
 .DS_Store
@@ -107,4 +109,4 @@ celerybeat.pid
 # mypy
 .mypy_cache/
 .dmypy.json
-dmypy.json 
+dmypy.json
